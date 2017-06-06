@@ -1,11 +1,11 @@
 __author__ = 'asimmons'
 
-from simplify_topology import *
+from geomsimplify import *
 from nose.tools import *
 import unittest
 
 
-class test_SimplifyProcess(unittest.TestCase):
+class test_GeomSimplify(unittest.TestCase):
 
     """
     Test append_junctions:
@@ -41,7 +41,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##            D
 
     def test_one_line_no_junction_append_junctions(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # Line AXD
@@ -63,7 +63,7 @@ class test_SimplifyProcess(unittest.TestCase):
 
     def test_two_lines_no_junctions_append_junctions(self):
 
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # LINE BC & AX
@@ -86,7 +86,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ## B-----C-----D-----F
 
     def test_two_lines_one_junction(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # LINE BCDF & AXD
@@ -108,7 +108,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##   Y
 
     def test_two_lines_cross_but_do_not_intersect_no_junctions(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # these lines do NOT have a junction because there is no shared point
@@ -132,7 +132,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##  A and Z
 
     def test_two_identical_lines_do_not_have_any_junctions(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # these lines do NOT have a junction because there are no different neighbors
@@ -160,7 +160,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##               R
 
     def test_splitting_lines_2_arcs(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # LINE BCDF & AXDR
@@ -193,7 +193,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##
 
     def test_splitting_line_w_junction_at_start_1_arc(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # LINE XB & BCDF
@@ -224,7 +224,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##
 
     def test_splitting_line_w_junction_at_end_1_arc(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # LINE XF & BCDF
@@ -254,7 +254,7 @@ class test_SimplifyProcess(unittest.TestCase):
     ##   A
 
     def test_one_line_one_arc(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         # set the quantitization factor
         g.set_quantitization_factor(1)
         # LINE ABC
@@ -272,7 +272,7 @@ class test_SimplifyProcess(unittest.TestCase):
         assert result == [[(3,3),(1,0),(-1,.5)]]
 
     def test_quantitize(self):
-        g = SimplifyProcess()
+        g = GeomSimplify()
         result = g.quantitize((12345,12345))
         assert_equal(result,(12345,12345))
 

@@ -5,8 +5,6 @@ import csv
 from geomsimplify import *
 from optparse import OptionParser
 
-
-
 ################################################################################################################################################
 # 1) This script is to created to simplify lines, multilines, polygons or multipolygon shapefiles.                                             #
 #                                                                                                                                              #
@@ -138,7 +136,7 @@ class SimplifyProcess:
                         if simpleShape is not None:
                             output.write({'geometry':mapping(simpleShape), 'properties': myGeom['properties']})
 
-        print "Self-intersecting rings fixed: " + str(self_intersections_fixed)
+        print "Self-intersecting rings found and fixed: " + str(self_intersections_fixed)
 
         #
         if debug and Topology:
@@ -260,8 +258,6 @@ def fix_self_intersections_mpolygon(mpolygon):
             checked_polygons.append(polygon)
 
     return MultiPolygon(checked_polygons)
-
-
 
 
 

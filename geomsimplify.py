@@ -140,6 +140,7 @@ class GeomSimplify(object):
                 # in order for the areas to be correct when the
                 # heap re-sorts
                 heapq.heappop(triangleArray)
+                heapq.heapify(triangleArray)
 
 
         # Create an list of indices from the triangleRing heap
@@ -220,7 +221,7 @@ class GeomSimplify(object):
                     if self.dictArcThresholds: # If we are using dynamic thresholds
                         start = self.quantitize(arc.coords[0])
                         end = self.quantitize(arc.coords[-1])
-                        arcKey = ArcThreshold.get_string(start,end)
+                        #arcKey = ArcThreshold.get_string(start,end)
                         arcString = ArcThreshold.get_string(start,end)
                         myThreshold = self.dictArcThresholds[arcString]
 

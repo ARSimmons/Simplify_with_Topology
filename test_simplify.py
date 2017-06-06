@@ -70,25 +70,25 @@ class test_GeomSimplify(unittest.TestCase):
     def test_simplify_line_remove_five_pts(self):
         # because end points/beginning points return no
         # areas there are only 5 triangle areas initially calculated
-        # triangle1 [(1000,0), (2,1), (2,0)] area = 499, pt 2,1
+        # triangle1 [(1000,0), (2,1), (2,0)] area = 498, pt 2,1
         # triangle2 [(2,1), (2,0), (1,0)] area = .5, pt 2,0 TO BE REMOVED
         # triangle3 [(2,0), (0,0), (0,1)] area = .5, pt 0,0 TO BE REMOVED
         # triangle4 [(0,0), (1,0), (2,0)] area = 0, pt 1,0 TO BE REMOVED
-        # triangle5 [(-1000,0), (0,1), (0,0)] area = 500, pt 0,1
+        # triangle5 [(-1000,0), (0,2), (0,0)] area = 502, pt 0,1
         # after the removal of the area= 0, you create 2 new areas
         # (that are also removed because 1 < 10)
         # triangle1 [(0,1), (0,0), (2,0)] area = 1, pt 0,0 TO BE REMOVED
         # triangle2 [(0,0), (2,0), (2,1)] area = 1, pt 2,0 TO BE REMOVED
        g = GeomSimplify()
-       array = [(-1000,0),(0,1),(0,0),(1,0),(2,0),(2,1),(1000,0)]
+       array = [(-1000,0),(0,2),(0,0),(1,0),(2,0),(2,1),(1000,0)]
 
        line = LineString(array)
 
-       simpleline = g.simplify_line(line, 10)
+       simpleline = g.simplify_line(line, 500)
 
        result = list(simpleline.coords)
 
-       assert_equal(result, [(-1000.0, 0.0), (0.0, 1.0), (1000.0, 0.0)])
+       assert_equal(result, [(-1000.0, 0.0), (0.0, 2.0), (1000.0, 0.0)])
 
     def test_simplify_multiline_zero_area(self):
         # construct a collection containing two linestrings with 3 coords each
