@@ -5,6 +5,7 @@ import fiona
 from shapely.geometry import shape, mapping, LineString, Polygon, MultiLineString, MultiPolygon
 from shapely.geometry.polygon import LinearRing
 import sys
+import csv
 from geomsimplify import *
 
 #Set up simplify_topology.py to be a dynamic simplification script.
@@ -38,7 +39,7 @@ from geomsimplify import *
 
 class PreserveTopology(object):
 
-    def process_file(self, inFile, outFile, threshold, Topology = False):
+    def process_file(self, inFile, outFile, threshold, Topology = False, DynamicThresholdFile = None):
         """
         Takes an 'inFile' of an ESRI shapefile, converts it into a Shapely geometry - simplifies.
         Returns an 'outFile' of a simplified ESRI shapefile.
@@ -76,7 +77,23 @@ class PreserveTopology(object):
                 # create dictionary of all junctions in all shapes
                 junction.find_all_junctions(inFile, dictJunctions)
 
-                simplify = GeomSimplify(dictJunctions) # if you need topology
+                dictArcThresholds = None
+                if DynamicThresholdFile:
+                    # create a dictionary of all arcs between junctions, keyed by the junction pair
+                    # with value set to the average threshold of adjacent polygons
+                    with open(DynamicThresholdFile, 'r') as iso_thresholds_file:
+                        csvreader = csv.reader(iso_thresholds_file)
+                        dictIsoThresholds = {}
+                        for line in iso_thresholds_file:
+                            if validate and len(line) != 2:
+                                raise ValueError('Unexpected number of columns in iso_thresholds_file for line: ' + repr(line))
+                            iso3 = line[0]
+                            threshold = line[1]
+                            dictIsoThresholds[iso3] = threshold
+
+                        dictArcThresholds = junction.find_all_arc_thresholds(inFile, dictJunctions, dictIsoThresholds)
+
+                simplify = GeomSimplify(dictJunctions, dictArcThresholds) # if you need topology
             else:
                 simplify = GeomSimplify()
 

@@ -49,7 +49,7 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
         assert(not test_dictJunctions ==True) # test that test_dictJunctions is empty
         assert(not test_dictNeighbors ==True) # test that test_dictNeighbors is empty
 
@@ -72,8 +72,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         assert(not test_dictJunctions ==True) # test that test_dictJunctions is empty
         assert(not test_dictNeighbors ==True) # test that test_dictNeighbors is empty
 
@@ -95,8 +95,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         assert test_dictJunctions == {(2,0): 1}
 
     ##
@@ -119,8 +119,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         assert(not test_dictJunctions ==True) # test that test_dictJunctions is empty
         assert(not test_dictNeighbors ==True) # test that test_dictNeighbors is empty
 
@@ -143,8 +143,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         assert(not test_dictJunctions ==True) # test that test_dictJunctions is empty
         assert(not test_dictNeighbors ==True) # test that test_dictNeighbors is empty
 
@@ -171,8 +171,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         # test_dictJunctions == {(2,0): 1}
         # For LINE AXDR if I run cut_line_by_junctions
         # there should now be two LineString obj's
@@ -204,8 +204,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array1)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array1)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         # test_dictJunctions == {(0,0): 1}
         # For LINE BCDF if I run cut_line_by_junctions
         # there should now be 1 LineString obj's
@@ -235,8 +235,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array1)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array2)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array1)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array2)
         # test_dictJunctions == {(3,0): 1}
         # For LINE BCDF if I run cut_line_by_junctions
         # there should now be 1 LineString obj's
@@ -264,8 +264,8 @@ class test_PreserveTopology(unittest.TestCase):
         # create global dictionary
         test_dictJunctions = {}
         test_dictNeighbors = {}
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
-        g.append_junctions(test_dictJunctions,test_dictNeighbors,array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
+        g.__append_junctions(test_dictJunctions, test_dictNeighbors, array)
         # Create one arc from the junctionless LINE ABC
         arcArray = g.cut_line_by_junctions(array_as_linestring, test_dictJunctions)
         result = list([list(i.coords) for i in arcArray])

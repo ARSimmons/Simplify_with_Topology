@@ -8,16 +8,21 @@ from shapely.geometry import shape, mapping, LineString, Polygon, MultiLineStrin
 from shapely.geometry.polygon import LinearRing
 import heapq
 from trianglecalculator import TriangleCalculator
+from arcthreshold import ArcThreshold
 
 # Turns on extra validation
 validate = True
 
+if validate:
+    dictArcThresholdCounts = {}
+
 
 class GeomSimplify(object):
 
-    def __init__(self, dictJunctions = None):
+    def __init__(self, dictJunctions = None, dictArcThresholds = None):
         self.junction = Junction()
         self.dictJunctions = dictJunctions
+        self.dictArcThresholds = dictArcThresholds
 
     def create_ring_from_arcs(self, arcList):
         ringPoints = []
@@ -208,10 +213,13 @@ class GeomSimplify(object):
                 simpleArcList = []
                 num_junctions = len(arcList)
                 for arc in arcList:
+                    myThreshold = threshold
+                    if self.dictArcThresholds:
+                        start = self.quantitize(arc[0])
+                        end = self.quantitize(arc[-1])
+                        myThreshold = self.dictArcThresholds[ArcThreshold.get_string(start,end)]
 
-                    # TODO find joint threshold
-
-                    simpleArc = self.simplify_line(arc, threshold, )
+                    simpleArc = self.simplify_line(arc, myThreshold)
                     simpleArcList.append(simpleArc)
 
                 # Stitch the arcs back together into a ring
@@ -230,7 +238,8 @@ class GeomSimplify(object):
             if simpleRing is not None:
                 simpleIntRings.append(simpleRing)
 
-        #TODO
+        #TODO Finish below
+
         # Check for interior rings that have points outside the exterior ring,
 
         # Check if more than one interior ring touches the exterior ring
@@ -369,7 +378,7 @@ class Junction(object):
 
         return (x_quantitized,y_quantitized)
 
-    def append_junctions(self, dictJunctions, dictNeighbors, pointsList):
+    def __append_junctions(self, dictJunctions, dictNeighbors, pointsList):
         """
         Builds a global dictionary of all the junctions and neighbors found in a
         single geometry within a shapefile. It determines if a point is a junction based on if it shares the same
@@ -431,11 +440,54 @@ class Junction(object):
                     raise ValueError('Unhandled geometry type: ' + repr(myShape.type))
 
 
+    def find_all_arc_thresholds(self, inFile, dictJunctions, dictIsoThresholds):
+        """
+        Return a dictionary of arc thresholds keyed by ArcThreshold.get_string(arc_start, arc_end)
+        """
+        with fiona.open(inFile, 'r') as input:
+            # read shapely geometries from file
+            for s in input:
+                myShape = shape(s['geometry'])
+                myIso3 = s['properties']['iso3']
+
+                myThreshold = None
+                if myIso3 in dictIsoThresholds:
+                    myThreshold = dictIsoThresholds[myIso3]
+                else:
+                    raise ValueError('iso3 is missing from dictIsoThresholds. Iso3: ' + repr(myIso3))
+
+                if isinstance(myShape, Polygon):
+                    self.update_arc_thresholds_polygon(myShape, myThreshold, dictJunctions, dictIsoThresholds)
+
+                if isinstance(myShape, MultiPolygon):
+                    for polygon in myShape.geoms:
+                        self.update_arc_thresholds_polygon(polygon, myThreshold, dictJunctions, dictIsoThresholds)
+
+    def update_arc_thresholds_polygon(self, polygon, threshold, dictJunctions, dictIsoThresholds):
+
+        if validate and not isinstance(polygon, Polygon):
+            raise ValueError('Invalid shape passed to update_arc_thresholds_polygon')
+
+        arcList = self.cut_ring_by_junctions(polygon.exterior, dictJunctions)
+        for arc in arcList:
+            start = self.quantitize(arc[0])
+            end = self.quantitize(arc[-1])
+            if not dictIsoThresholds[ArcThreshold.get_string(start, end)]:
+                dictIsoThresholds[ArcThreshold.get_string(start, end)] = threshold
+                if validate:
+                    dictArcThresholdCounts[ArcThreshold.get_string(start, end)] = 1
+            else:
+                dictIsoThresholds[ArcThreshold.get_string(start, end)] = (dictIsoThresholds[ArcThreshold.get_string(start, end)] + threshold) / 2
+                if validate:
+                    dictArcThresholdCounts[ArcThreshold.get_string(start, end)] += 1
+                    if dictArcThresholdCounts[ArcThreshold.get_string(start, end)] > 2:
+                        raise ValueError('More than 2 arcs have the same start and end points: ' + ArcThreshold.get_string(start, end))
+
     def find_junctions_line(self, myShape, dictJunctions, dictNeighbors):
 
         pointsLineList = list(myShape.coords)
 
-        self.append_junctions(dictJunctions, dictNeighbors, pointsLineList)
+        self.__append_junctions(dictJunctions, dictNeighbors, pointsLineList)
 
 
     def find_junctions_mline(self, myShape, dictJunctions, dictNeighbors):
@@ -448,13 +500,13 @@ class Junction(object):
                 raise ValueError('Non-Polygon passed to find_junctions_polygon: ' + repr(myShape.type))
 
         pointsList = list(myShape.exterior.coords[:-1])
-        self.append_junctions(dictJunctions, dictNeighbors, pointsList)
+        self.__append_junctions(dictJunctions, dictNeighbors, pointsList)
 
         # Validate that interior rings have no junctions
         if validate:
             countJunctions = len(dictJunctions)
             for ring in myShape.interiors:
-                self.append_junctions(dictJunctions, dictNeighbors, list(ring.coords[:-1]))
+                self.__append_junctions(dictJunctions, dictNeighbors, list(ring.coords[:-1]))
                 if len(dictJunctions) != countJunctions:
                     raise ValueError('Junction found on interior ring')
 
@@ -615,9 +667,60 @@ class Junction(object):
         simpleRing = GeomSimplify.simplify_ring(tempRing, sys.maxsize, minimumPoints=junctionsToAdd+2)
 
         # Add the ring points to dictJunctions
-        for point in simpleRing.coords:
+        for index, point in enumerate(simpleRing.coords):
             quant_point = self.quantitize(point)
             if quant_point not in dictJunctions:
+
+                if validate:
+                    if index == 0 or index == len(simpleRing.coords)-1:
+                        raise ValueError('Start or end point of ring not found in dictJunctions. Point: ' + repr(quant_point))
+
                 dictJunctions[quant_point] = 0
                 # Using a 0 instead of a 1 to distinguish this type of of junction from
                 # the ones calculated by append_junctions
+
+        # If dynamic simplifaction is enabled, update the new arc thresholds
+        # for the arcs created by the new junction
+        if GeomSimplify.dictArcThresholds:
+            for index, point in enumerate(simpleRing.coords):
+                # Check for newly added points
+                if dictJunctions[self.quantitize(point)] == 0:
+                    # Determine the real junctions on either side of the point
+                    start_index = index - 1
+                    end_index = index + 1
+                    start_point = self.quantitize(simpleRing.coords[start_index])
+                    end_point = self.quantitize(simpleRing.coords[end_index])
+
+                    while (dictJunctions[start_point] == 0):
+                        start_index -= 1
+                        start_point = self.quantitize(simpleRing.coords[start_index])
+
+                    while (dictJunctions[end_point] == 0):
+                        end_index += 1
+                        end_point = self.quantitize(simpleRing.coords[end_index])
+
+                    # Get threshold
+                    arc_string = ArcThreshold.get_string(start_point, end_point)
+                    if validate and arc_string not in GeomSimplify.dictArcThresholds:
+                        raise ValueError('Arc not found in dictArcThresholds. Arc string: ' + arc_string)
+                    threshold = GeomSimplify.dictArcThresholds[arc_string]
+
+                    # Now that we have the threshold, add the 2 new arcs that were created by this point
+                    point = self.quantitize(simpleRing.coords[index])
+                    left = self.quantitize(simpleRing.coords[index - 1])
+                    right = self.quantitize(simpleRing.coords[index + 1])
+                    arc1 = ArcThreshold.get_string(left, point)
+                    arc2 = ArcThreshold.get_string(point, right)
+                    GeomSimplify.dictArcThresholds[arc1] = threshold
+                    GeomSimplify.dictArcThresholds[arc2] = threshold
+
+
+
+
+
+
+
+
+
+
+
