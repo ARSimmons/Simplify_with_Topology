@@ -18,9 +18,10 @@ if validate:
 
 
 class GeomSimplify(object):
+    # default quantization factor is 1
+    quantitizationFactor = (.01, .01)
 
     def __init__(self, dictJunctions = None, dictArcThresholds = None):
-        self.junction = Junction()
         self.dictJunctions = dictJunctions
         self.dictArcThresholds = dictArcThresholds
 
@@ -34,8 +35,8 @@ class GeomSimplify(object):
             else:
                 if validate:
 
-                    last = self.junction.quantitize(ringPoints[-1])
-                    first = self.junction.quantitize(arcPoints[0])
+                    last = self.quantitize(ringPoints[-1])
+                    first = self.quantitize(arcPoints[0])
                     if last[0] != first[0] or last[1] != first[1]:
                         raise ValueError('arcList does not form a ring.')
                 ringPoints.extend(arcPoints[1:])
@@ -50,7 +51,7 @@ class GeomSimplify(object):
         if not self.dictJunctions:
             return self.simplify_line(line, threshold)
 
-        lineList = self.junction.cut_line_by_junctions(line, self.dictJunctions)
+        lineList = self.cut_line_by_junctions(line, self.dictJunctions)
         simplifiedLines = []
         for line in lineList:
             simplifiedLines.append(self.simplify_line(line, threshold))
@@ -166,7 +167,7 @@ class GeomSimplify(object):
         if not self.dictJunctions:
             return self.simplify_multiline(mline, threshold)
 
-        mlineArray = self.junction.cut_mline_by_junctions(mline, self.dictJunctions)
+        mlineArray = self.cut_mline_by_junctions(mline, self.dictJunctions)
         simplifiedShapes = []
         for mline in mlineArray:
             simplifiedShapes.append(self.simplify_multiline(mline, threshold))
@@ -203,12 +204,12 @@ class GeomSimplify(object):
 
     def simplify_polygon_topology(self, poly, threshold):
         if self.dictJunctions:
-            cutPolygonTuple = self.junction.cut_polygon_by_junctions(poly, self.dictJunctions)
+            cutPolygonTuple = self.cut_polygon_by_junctions(poly, self.dictJunctions)
             arcList = cutPolygonTuple[0]
             originalPolygon = cutPolygonTuple[1]
 
             if arcList is None: # No junctions on polygon exterior ring
-                simpleExtRing = GeomSimplify.simplify_ring(poly.exterior, threshold)
+                simpleExtRing = self.simplify_ring(poly.exterior, threshold, self.dictJunctions)
             else:
                 simpleArcList = []
                 num_junctions = len(arcList)
@@ -226,7 +227,7 @@ class GeomSimplify(object):
                 simpleExtRing = self.create_ring_from_arcs(simpleArcList)
         else:
             # Get exterior ring
-            simpleExtRing = GeomSimplify.simplify_ring(poly.exterior, threshold)
+            simpleExtRing = self.simplify_ring(poly.exterior, threshold, self.dictJunctions)
 
         # If the exterior ring was removed by simplification, return None
         if simpleExtRing is None:
@@ -234,7 +235,7 @@ class GeomSimplify(object):
 
         simpleIntRings = []
         for ring in poly.interiors:
-            simpleRing = GeomSimplify.simplify_ring(ring, threshold)
+            simpleRing = self.simplify_ring(ring, threshold, self.dictJunctions)
             if simpleRing is not None:
                 simpleIntRings.append(simpleRing)
 
@@ -245,6 +246,13 @@ class GeomSimplify(object):
         # Check if more than one interior ring touches the exterior ring
 
         return shapely.geometry.Polygon(simpleExtRing, simpleIntRings)
+
+
+    def is_interior_ring_outside(self, extArc, intRings):
+        return False
+
+    def count_interior_ring_touchs(self, extArc, intRings):
+        return 0
 
     def simplify_multipolygon_topology(self, mpoly, threshold):
         # break multipolygon into polys
@@ -285,8 +293,14 @@ class GeomSimplify(object):
 
         return newRing
 
-    @staticmethod
-    def simplify_ring(ring, threshold, minimumPoints = 2):
+    def simplify_ring(self, ring, threshold, dictJunctions, minimumPoints = 2):
+
+        # A ring must not have any junctions on it!
+        if validate:
+            for point in ring.coords:
+                quant_point = self.quantitize(point)
+                if quant_point in dictJunctions:
+                    raise ValueError('Ring has junctions on it')
 
         # Build list of TriangleCalculators
         triangleRing = []
@@ -363,10 +377,6 @@ class GeomSimplify(object):
 
         return simpleRing
 
-class Junction(object):
-    # default quantization factor is 1
-    quantitizationFactor = (0.001,0.001)
-
     def set_quantitization_factor(self, quantValue):
         self.quantitizationFactor = (quantValue, quantValue)
 
@@ -384,9 +394,21 @@ class Junction(object):
         single geometry within a shapefile. It determines if a point is a junction based on if it shares the same
         point AND has different neighbors.
         """
+
+        if validate:
+            dictCheck = {}
+
         # updates dictJunctions & dictNeighbors
         for index, point in enumerate(pointsList):
             quant_point = self.quantitize(point)
+
+            # Check that no points on the points list are quantitized to the same value. If they are, you may need to fix the
+            # data or lower the quantitization factor
+            if validate:
+                if quant_point in dictCheck:
+                    raise ValueError('Two points in the same shape quantitized to the same value: ' + repr(quant_point) + '.  Points: ' + repr(point) + ', ' + repr(dictCheck[quant_point]))
+                dictCheck[quant_point] = point
+
             quant_neighbors = []
             # append the previous neighbor
             if index - 1 > 0:
@@ -425,16 +447,16 @@ class Junction(object):
                 myShape = shape(myGeom['geometry'])
 
                 if isinstance(myShape, LineString):
-                    self.find_junctions_line(myShape, dictJunctions, dictNeighbors)
+                    self.append_junctions_line(myShape, dictJunctions, dictNeighbors)
 
                 elif isinstance(myShape, MultiLineString):
-                    self.find_junctions_mline(myShape, dictJunctions, dictNeighbors)
+                    self.append_junctions_mline(myShape, dictJunctions, dictNeighbors)
 
                 elif isinstance(myShape, Polygon):
-                    self.find_junctions_polygon(myShape, dictJunctions, dictNeighbors)
+                    self.append_junctions_polygon(myShape, dictJunctions, dictNeighbors)
 
                 elif isinstance(myShape, MultiPolygon):
-                    self.find_junctions_mpolygon(myShape, dictJunctions, dictNeighbors)
+                    self.append_junctions_mpolygon(myShape, dictJunctions, dictNeighbors)
 
                 else:
                     raise ValueError('Unhandled geometry type: ' + repr(myShape.type))
@@ -465,14 +487,20 @@ class Junction(object):
 
     def update_arc_thresholds_polygon(self, polygon, threshold, dictJunctions, dictIsoThresholds):
 
+        threshold = float(threshold)
+
         if validate and not isinstance(polygon, Polygon):
             raise ValueError('Invalid shape passed to update_arc_thresholds_polygon')
 
+        # If there are no juctions on the polygon exterior ring, just return
+        if self.count_junctions_in_points_list(polygon.exterior.coords, dictJunctions) == 0:
+            return
+
         arcList = self.cut_ring_by_junctions(polygon.exterior, dictJunctions)
         for arc in arcList:
-            start = self.quantitize(arc[0])
-            end = self.quantitize(arc[-1])
-            if not dictIsoThresholds[ArcThreshold.get_string(start, end)]:
+            start = self.quantitize(arc.coords[0])
+            end = self.quantitize(arc.coords[-1])
+            if not ArcThreshold.get_string(start, end) in dictIsoThresholds:
                 dictIsoThresholds[ArcThreshold.get_string(start, end)] = threshold
                 if validate:
                     dictArcThresholdCounts[ArcThreshold.get_string(start, end)] = 1
@@ -483,21 +511,21 @@ class Junction(object):
                     if dictArcThresholdCounts[ArcThreshold.get_string(start, end)] > 2:
                         raise ValueError('More than 2 arcs have the same start and end points: ' + ArcThreshold.get_string(start, end))
 
-    def find_junctions_line(self, myShape, dictJunctions, dictNeighbors):
+    def append_junctions_line(self, myShape, dictJunctions, dictNeighbors):
 
         pointsLineList = list(myShape.coords)
 
         self.__append_junctions(dictJunctions, dictNeighbors, pointsLineList)
 
 
-    def find_junctions_mline(self, myShape, dictJunctions, dictNeighbors):
+    def append_junctions_mline(self, myShape, dictJunctions, dictNeighbors):
         for line in myShape.geoms:
-            self.find_junctions_line(line, dictJunctions, dictNeighbors)
+            self.append_junctions_line(line, dictJunctions, dictNeighbors)
 
-    def find_junctions_polygon(self, myShape, dictJunctions, dictNeighbors):
+    def append_junctions_polygon(self, myShape, dictJunctions, dictNeighbors):
         if validate:
             if not isinstance(myShape, Polygon):
-                raise ValueError('Non-Polygon passed to find_junctions_polygon: ' + repr(myShape.type))
+                raise ValueError('Non-Polygon passed to append_junctions_polygon: ' + repr(myShape.type))
 
         pointsList = list(myShape.exterior.coords[:-1])
         self.__append_junctions(dictJunctions, dictNeighbors, pointsList)
@@ -511,9 +539,9 @@ class Junction(object):
                     raise ValueError('Junction found on interior ring')
 
 
-    def find_junctions_mpolygon(self, myShape, dictJunctions, dictNeighbors):
+    def append_junctions_mpolygon(self, myShape, dictJunctions, dictNeighbors):
         for polygon in myShape.geoms:
-            self.find_junctions_polygon(polygon, dictJunctions, dictNeighbors)
+            self.append_junctions_polygon(polygon, dictJunctions, dictNeighbors)
 
 
     def cut_line_by_junctions(self, myShape, dictJunctions):
@@ -595,13 +623,13 @@ class Junction(object):
             if quant_pt in dictJunctions:
                 junctionPointIndices.append(index)
 
-        # Rotate the ring to the first junction point
-        if len(junctionPointIndices) > 0:
-            ring = GeomSimplify.rotate_ring(ring, junctionPointIndices[0])
-
         # If there are no junctions on ring just return None
         if len(junctionPointIndices) == 0:
             return None
+
+        # Rotate the ring to the first junction point
+        if len(junctionPointIndices) > 0:
+            ring = self.rotate_ring(ring, junctionPointIndices[0])
 
         # Cut the ring into lines if there are junctions
         arcsList = self.cut_line_by_junctions(ring, dictJunctions)
@@ -617,6 +645,10 @@ class Junction(object):
 
         # Count junctions on exterior ring
         junctionCountExtRing = self.count_junctions_in_points_list(exteriorRing.coords, dictJunctions)
+
+        # If there are no junctions, just return None as the cutExterior ring
+        if junctionCountExtRing == 0:
+            return (None, myShape)
 
         # If there are at least 1, but fewer than 3 junctions on the exterior ring
         # we need to add new 'junctions' to make sure we don't simplify below 3 points
@@ -658,30 +690,40 @@ class Junction(object):
                 junctionPoints.append(qp)
         return len(junctionPoints)
 
-
+    # Add artificial junctions to a ring that prevent it from being simplified at the artificial junctions
     def add_junctions_to_ring(self, ring, junctionsToAdd, dictJunctions):
         # Copy ring to temporary
         tempRing = copy.copy(ring)
 
+        # TODO BELOW doesn't work because simplify_ring requires that there be no juctions on ring
         # Simplify the ring to (junctionsToAdd + 2) points
-        simpleRing = GeomSimplify.simplify_ring(tempRing, sys.maxsize, minimumPoints=junctionsToAdd+2)
+        ##simpleRing = self.simplify_ring(tempRing, sys.maxsize, dictJunctions, minimumPoints=junctionsToAdd+2)
+
+
+        # For now just add the first non-junction points on the ring to the list of junctions:
+        simpleRing = []
+        for index, point in enumerate(ring.coords):
+            quant_point = self.quantitize(point)
+            if quant_point in dictJunctions: # if the point is a junction, add it to simplified ring
+                simpleRing.append(ring.coords[index])
+            elif junctionsToAdd > 0:    # even it the point is not a junction, if we still need new to add new juctions add the current point
+                simpleRing.append(ring.coords[index])
+                junctionsToAdd -= 1
+        # Convert list into LinearRing
+        simpleRing = LinearRing(simpleRing)
+
 
         # Add the ring points to dictJunctions
         for index, point in enumerate(simpleRing.coords):
             quant_point = self.quantitize(point)
             if quant_point not in dictJunctions:
-
-                if validate:
-                    if index == 0 or index == len(simpleRing.coords)-1:
-                        raise ValueError('Start or end point of ring not found in dictJunctions. Point: ' + repr(quant_point))
-
                 dictJunctions[quant_point] = 0
                 # Using a 0 instead of a 1 to distinguish this type of of junction from
                 # the ones calculated by append_junctions
 
         # If dynamic simplifaction is enabled, update the new arc thresholds
         # for the arcs created by the new junction
-        if GeomSimplify.dictArcThresholds:
+        if self.dictArcThresholds:
             for index, point in enumerate(simpleRing.coords):
                 # Check for newly added points
                 if dictJunctions[self.quantitize(point)] == 0:
@@ -701,9 +743,9 @@ class Junction(object):
 
                     # Get threshold
                     arc_string = ArcThreshold.get_string(start_point, end_point)
-                    if validate and arc_string not in GeomSimplify.dictArcThresholds:
+                    if validate and arc_string not in self.dictArcThresholds:
                         raise ValueError('Arc not found in dictArcThresholds. Arc string: ' + arc_string)
-                    threshold = GeomSimplify.dictArcThresholds[arc_string]
+                    threshold = self.dictArcThresholds[arc_string]
 
                     # Now that we have the threshold, add the 2 new arcs that were created by this point
                     point = self.quantitize(simpleRing.coords[index])
@@ -711,8 +753,8 @@ class Junction(object):
                     right = self.quantitize(simpleRing.coords[index + 1])
                     arc1 = ArcThreshold.get_string(left, point)
                     arc2 = ArcThreshold.get_string(point, right)
-                    GeomSimplify.dictArcThresholds[arc1] = threshold
-                    GeomSimplify.dictArcThresholds[arc2] = threshold
+                    self.dictArcThresholds[arc1] = threshold
+                    self.dictArcThresholds[arc2] = threshold
 
 
 

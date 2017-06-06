@@ -37,6 +37,8 @@ from geomsimplify import *
 #
 ###################################################################################################################################
 
+debug = True
+
 class PreserveTopology(object):
 
     def process_file(self, inFile, outFile, threshold, Topology = False, DynamicThresholdFile = None):
@@ -71,27 +73,29 @@ class PreserveTopology(object):
                 # key = quantitized junction points, value = 1
                 dictJunctions = {}
 
+
                 #create instace of Junction
-                junction = Junction()
+                simplifyObj = GeomSimplify()
 
                 # create dictionary of all junctions in all shapes
-                junction.find_all_junctions(inFile, dictJunctions)
+                simplifyObj.find_all_junctions(inFile, dictJunctions)
 
                 dictArcThresholds = None
                 if DynamicThresholdFile:
                     # create a dictionary of all arcs between junctions, keyed by the junction pair
                     # with value set to the average threshold of adjacent polygons
-                    with open(DynamicThresholdFile, 'r') as iso_thresholds_file:
+                    with open(DynamicThresholdFile, 'rb') as iso_thresholds_file:
                         csvreader = csv.reader(iso_thresholds_file)
                         dictIsoThresholds = {}
                         for line in iso_thresholds_file:
-                            if validate and len(line) != 2:
-                                raise ValueError('Unexpected number of columns in iso_thresholds_file for line: ' + repr(line))
-                            iso3 = line[0]
-                            threshold = line[1]
+                            line_array = line.replace('\r', '').replace('\n', '').split(",")
+                            if validate and len(line_array) != 2:
+                                raise ValueError('Unexpected number of columns in iso_thresholds_file for line: ' + repr(line_array))
+                            iso3 = line_array[0]
+                            threshold = line_array[1]
                             dictIsoThresholds[iso3] = threshold
 
-                        dictArcThresholds = junction.find_all_arc_thresholds(inFile, dictJunctions, dictIsoThresholds)
+                        dictArcThresholds = simplifyObj.find_all_arc_thresholds(inFile, dictJunctions, dictIsoThresholds)
 
                 simplify = GeomSimplify(dictJunctions, dictArcThresholds) # if you need topology
             else:
@@ -131,6 +135,12 @@ class PreserveTopology(object):
                         if simpleShape is not None:
                             output.write({'geometry':mapping(simpleShape), 'properties': myGeom['properties']})
 
+        #
+        if debug:
+            with open('debug_junctions.txt', 'w') as output:
+                for key in dictJunctions:
+                    output.write(str(key))
+
 
 
 def str2bool(v):
@@ -143,7 +153,7 @@ def str2bool(v):
 
 def main():
     print "number of arguments (incl. py file name): " + str(len(sys.argv))
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 5 and len(sys.argv) != 6:
         print "Wrong amount of arguments!"
         usage()
         exit()
@@ -156,15 +166,19 @@ def main():
     topology = sys.argv[4]
     topology_convert = str2bool(topology)
 
+    dynamic_thresholds = None
+    if len(sys.argv) == 6:
+        dynamic_thresholds = sys.argv[5]
+
     if topology_convert is False:
-        geomSimplifyObject.process_file(inputFile, outputFile, float(threshold), topology_convert)
+        geomSimplifyObject.process_file(inputFile, outputFile, float(threshold), topology_convert, dynamic_thresholds)
         print "Finished simplifying file (with topology NOT preserved)!"
     elif topology_convert is True:
-        geomSimplifyObject.process_file(inputFile, outputFile, float(threshold), topology_convert)
+        geomSimplifyObject.process_file(inputFile, outputFile, float(threshold), topology_convert, dynamic_thresholds)
         print "Finished simplifying file (topology was preserved)!"
 
 def usage():
-    print "python simplify_topology.py <input file path> <output file path> <threshold> Topology= <True> or <False>"
+    print "python simplify_topology.py <input file path> <output file path> <threshold> Topology= <True/False> DynamicThresholdFile=<(optional) dynamic threshold file path>"
 
 
 if __name__ == "__main__":
