@@ -3,12 +3,6 @@
 
 __author__ = 'asimmons'
 
-## This script is to created to simplify
-## Polygons using the
-## Visvalingam algorithm found here
-## http://www2.dcs.hull.ac.uk/CISRG/publications/DPs/DP10/DP10.html
-
-## Threshold is the area of the largest allowed triangle
 
 
 import fiona

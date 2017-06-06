@@ -1,6 +1,6 @@
 __author__ = 'asimmons'
 
-from simplify import *
+from geomsimplify import *
 from nose.tools import *
 import unittest
 
