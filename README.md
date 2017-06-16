@@ -15,7 +15,7 @@
 
 Fiona (1.1+) and Shapely libraries used to simplify lines, multilines, polygons, and multipolygon shapefiles by an area threshold. Also provides an option to
 preserve topology. Topology can be preserved when simplifying by one threshold  value, or by many (i.e. 'dynamic simplification'). In the case of using
-'dynamic simplification' the user must provide a csv (no header), containing the 
+'dynamic simplification' the user must provide a csv (no header), containing the desired threshold values per entity (right now hardcoded to be iso3 -country- entities)
 
 The simplification algorithm is based off of M. Visvalingam and J.D. Whyatt's algorithm (1993). More details about the 
 Visvalingam-Whyatt algorithm can be found here: https://hydra.hull.ac.uk/resources/hull:8338      .
