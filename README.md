@@ -33,7 +33,7 @@ Key points to note:
 	- threshold units are determined by shapefile map units.  
 	- to run from command line: 
 	
-	   python simplify_topology.py <input file path> <output file path> <IF you want to preserve Topology (optional) = --topology> <threshold> OR <DynamicThresholdFile=(optional) dynamic threshold csv file path>
+	   python simplify_topology.py <input file path> <output file path> <Preserve Topology (optional) = --topology> <threshold> OR <DynamicThresholdFile=(optional) dynamic threshold csv file path>
 	
 ![Screenshot](https://raw.github.com/ARSimmons/Simplify_with_Topology/master/dynamic_simplification.JPG)
 
