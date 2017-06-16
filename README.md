@@ -28,8 +28,6 @@ Key points to note:
 	- In a topology preserving process, Polygons which are smaller then the area threshold will be deleted
       UNLESS they are adjacent to another border (in which case they will delete down to a minimum of 3 vertices).	
 	- Lines preserve their beginning and end point, thus lines CANNOT BE DELETED (regardless of the topology setting). 
-	  The beginning and end points of a line feature are static throughout the 
-	  simplification process.
 	- threshold units are determined by shapefile map units.  
 	- to run from command line: 
 	
