@@ -31,6 +31,13 @@ More details about the Visvalingam-Whyatt algorithm can be found [here.](https:/
 
 > python simplify_topology.py `<input file path>` `<output file path>` <Preserve Topology (optional) = --topology> `<threshold>` OR <DynamicThresholdFile=(optional) dynamic threshold csv file path>
 
+**Example usage:**
+
+> python simplify_topology.py -i input/input.shp -o output/output.shp -t 0.0001
+>
+> python simplify_topology.py -i input/input.shp -o output/output.shp -t 0.0001 -j
+>
+> python simplify_topology.py -i input/input.shp -o output/output.shp -d dynamic_thresholds.csv
 
 ![Screenshot](https://raw.github.com/ARSimmons/Simplify_with_Topology/master/dynamic_simplification.JPG)
 
