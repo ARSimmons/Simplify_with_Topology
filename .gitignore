@@ -45,3 +45,15 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+
+
+# virtual environment
+venv/
+
+# test input & output directories
+input/
+output/
+
+# debug file
+debug_junctions.txt
+note.txt

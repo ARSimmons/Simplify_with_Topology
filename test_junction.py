@@ -1,8 +1,10 @@
-__author__ = 'asimmons'
+__author__ = "asimmons"
 
+# pip install junction not working
 from junction import *
 from nose.tools import *
 import unittest
+
 
 class test_Junction(unittest.TestCase):
 
